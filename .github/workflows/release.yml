@@ -137,6 +137,15 @@ jobs:
           cd dist
           shasum -a 256 *.tar.gz > SHA256SUMS.txt
 
+      - name: Remove existing release if present
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release delete "${GITHUB_REF_NAME}" --yes
+          fi
+
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
