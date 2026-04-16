@@ -104,10 +104,10 @@ func runCreateGitHubRepository(args []string, stdin io.Reader, stdout io.Writer)
 		v1alpha1.GitHubRepositorySpec{
 			Owner:         owner,
 			Name:          name,
-			Visibility:    visibility,
-			Description:   description,
-			Homepage:      homepage,
-			DefaultBranch: defaultBranch,
+			Visibility:    &visibility,
+			Description:   optionalString(description),
+			Homepage:      optionalString(homepage),
+			DefaultBranch: &defaultBranch,
 			AutoInit:      autoInit,
 			Topics:        topics,
 		},
@@ -236,6 +236,17 @@ func disambiguateManifestFilename(dir, owner, name string, p *prompter) (string,
 	fmt.Fprintf(p.writer, "  %s using filename %s for the new manifest.\n", s.green("✓"), s.bold(suffixedFilename))
 
 	return suffixedFilename, nil
+}
+
+// optionalString returns nil for an empty string and a pointer to the value
+// otherwise. Alloy uses nil to mean "leave this field unmanaged" so that
+// downstream GitHub defaults apply when the user skipped the prompt.
+func optionalString(v string) *string {
+	if v == "" {
+		return nil
+	}
+
+	return &v
 }
 
 // defaultMetadataName builds a conventional metadata.name from the owner and
