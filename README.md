@@ -94,6 +94,8 @@ Smyth publishes:
 - GitHub Release archives for direct CLI consumption
 - Docker images to GitHub Container Registry
 
+The GitHub Actions workflow publishes the container image to `ghcr.io` and links it to this repository so the package can be managed from the repository's package settings.
+
 Example published image reference:
 
 ```text
@@ -101,6 +103,18 @@ ghcr.io/example-org/smyth:latest
 ```
 
 Replace `example-org` with the repository owner when pulling from GitHub Container Registry.
+
+Container images are intended to remain private. Pulling from `ghcr.io` requires authenticating with Docker using a GitHub personal access token (classic) that has at least `read:packages`.
+
+Example authentication flow:
+
+```bash
+export CR_PAT=YOUR_GITHUB_PAT
+echo "$CR_PAT" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+docker pull ghcr.io/example-org/smyth:latest
+```
+
+If the package is owned by an organization that uses SSO, authorize the token for that organization before pulling images locally.
 
 ## AI-Assisted Development
 
