@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	v1alpha1 "github.com/emkaytec/alloy/manifest/v1alpha1"
+	v1alpha1 "github.com/wiscotrashpanda/alloy/manifest/v1alpha1"
 	"gopkg.in/yaml.v3"
 )
 
