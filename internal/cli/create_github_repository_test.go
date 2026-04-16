@@ -67,12 +67,20 @@ func TestCreateGitHubRepositoryUsesDefaults(t *testing.T) {
 		t.Errorf("spec.name: got %q, want example-repo", manifest.Spec.Name)
 	}
 
-	if manifest.Spec.Visibility != "private" {
-		t.Errorf("spec.visibility: got %q, want private", manifest.Spec.Visibility)
+	if got := derefString(manifest.Spec.Visibility); got != "private" {
+		t.Errorf("spec.visibility: got %q, want private", got)
 	}
 
-	if manifest.Spec.DefaultBranch != "main" {
-		t.Errorf("spec.defaultBranch: got %q, want main", manifest.Spec.DefaultBranch)
+	if got := derefString(manifest.Spec.DefaultBranch); got != "main" {
+		t.Errorf("spec.defaultBranch: got %q, want main", got)
+	}
+
+	if manifest.Spec.Description != nil {
+		t.Errorf("spec.description: got %q, want nil", *manifest.Spec.Description)
+	}
+
+	if manifest.Spec.Homepage != nil {
+		t.Errorf("spec.homepage: got %q, want nil", *manifest.Spec.Homepage)
 	}
 
 	if manifest.Spec.AutoInit {
@@ -126,20 +134,20 @@ func TestCreateGitHubRepositoryCollectsOptionalFields(t *testing.T) {
 		t.Errorf("metadata.name: got %q, want example-org-example-repo", manifest.Metadata.Name)
 	}
 
-	if manifest.Spec.Visibility != "public" {
-		t.Errorf("spec.visibility: got %q, want public", manifest.Spec.Visibility)
+	if got := derefString(manifest.Spec.Visibility); got != "public" {
+		t.Errorf("spec.visibility: got %q, want public", got)
 	}
 
-	if manifest.Spec.Description != "An example description" {
-		t.Errorf("spec.description: got %q", manifest.Spec.Description)
+	if got := derefString(manifest.Spec.Description); got != "An example description" {
+		t.Errorf("spec.description: got %q", got)
 	}
 
-	if manifest.Spec.Homepage != "https://example.com" {
-		t.Errorf("spec.homepage: got %q", manifest.Spec.Homepage)
+	if got := derefString(manifest.Spec.Homepage); got != "https://example.com" {
+		t.Errorf("spec.homepage: got %q", got)
 	}
 
-	if manifest.Spec.DefaultBranch != "trunk" {
-		t.Errorf("spec.defaultBranch: got %q, want trunk", manifest.Spec.DefaultBranch)
+	if got := derefString(manifest.Spec.DefaultBranch); got != "trunk" {
+		t.Errorf("spec.defaultBranch: got %q, want trunk", got)
 	}
 
 	if !manifest.Spec.AutoInit {
@@ -352,4 +360,12 @@ func TestCreateGitHubRepositoryValidatesVisibility(t *testing.T) {
 	if !strings.Contains(stdout.String(), "must be one of") {
 		t.Fatalf("expected visibility validation message, got:\n%s", stdout.String())
 	}
+}
+
+func derefString(p *string) string {
+	if p == nil {
+		return ""
+	}
+
+	return *p
 }

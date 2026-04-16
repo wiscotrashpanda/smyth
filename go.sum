@@ -1,5 +1,5 @@
-github.com/emkaytec/alloy v0.2.0 h1:qLkoR7BhY5oG8oE3YWeXuhTOMW4XnU7E+M05n10tSFI=
-github.com/emkaytec/alloy v0.2.0/go.mod h1:Hce6pq/n85froxPcJp9B2OY2+RnsXiNdsSj2r7BPHmg=
+github.com/emkaytec/alloy v0.2.1 h1:WB9bluQwaqpS5Ihf5IWxjLx0Hc5y+sTP4Gv/LLnTurQ=
+github.com/emkaytec/alloy v0.2.1/go.mod h1:Hce6pq/n85froxPcJp9B2OY2+RnsXiNdsSj2r7BPHmg=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
