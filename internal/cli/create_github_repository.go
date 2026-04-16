@@ -14,18 +14,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const createGitHubRepositoryHelp = `Usage:
-  smyth create-manifest github-repo [--dir <path>]
-
-Interactively prompts for the fields required to build a GitHubRepository
-manifest. Nested specs (features, merge policy, branch protection, etc.) are
-left out for now and can be added to the generated manifest by hand or by
-follow-up commands.
-
-Flags:
-  --dir <path>   Directory to write the manifest into (default: current directory)
-`
-
 // suffixAlphabet is the pool of characters used when disambiguating a manifest
 // whose filename would otherwise collide with an existing file.
 const suffixAlphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -34,13 +22,15 @@ const suffixAlphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
 // prompts for the minimal spec fields, validates the resulting manifest
 // through alloy, and writes it to disk as YAML.
 func runCreateGitHubRepository(args []string, stdin io.Reader, stdout io.Writer) error {
+	s := newStyler(stdout)
+
 	flags := flag.NewFlagSet("create-manifest github-repo", flag.ContinueOnError)
 	flags.SetOutput(stdout)
 
 	dir := flags.String("dir", ".", "Directory to write the manifest into")
 
 	flags.Usage = func() {
-		fmt.Fprint(stdout, createGitHubRepositoryHelp)
+		writeCreateGitHubRepositoryHelp(stdout, s)
 	}
 
 	if err := flags.Parse(args); err != nil {
@@ -55,11 +45,12 @@ func runCreateGitHubRepository(args []string, stdin io.Reader, stdout io.Writer)
 		return fmt.Errorf("create-manifest github-repo takes no positional arguments")
 	}
 
-	p := newPrompter(stdin, stdout)
-
-	fmt.Fprintln(stdout, "Creating a new GitHubRepository manifest.")
-	fmt.Fprintln(stdout, "Press enter to accept the default shown in brackets.")
+	writeBanner(stdout, s)
+	writeSectionHeader(stdout, s, "Authoring a GitHubRepository manifest")
+	fmt.Fprintln(stdout, s.dim("  press enter to accept the default shown in brackets"))
 	fmt.Fprintln(stdout)
+
+	p := newPrompter(stdin, stdout)
 
 	owner, err := p.askRequired("Repository owner (org or user)")
 	if err != nil {
@@ -136,9 +127,40 @@ func runCreateGitHubRepository(args []string, stdin io.Reader, stdout io.Writer)
 		return err
 	}
 
-	fmt.Fprintf(stdout, "\nWrote manifest to %s\n", outputPath)
+	fmt.Fprintln(stdout)
+	writeSectionHeader(stdout, s, "Forged")
+	fmt.Fprintf(stdout, "  %s wrote manifest to %s\n", s.green("✓"), s.bold(outputPath))
+	fmt.Fprintf(stdout, "  %s review the file and commit it, then hand it to anvil to reconcile.\n", s.dim("›"))
 
 	return nil
+}
+
+// writeSectionHeader renders a light horizontal rule so interactive output has
+// some visual rhythm without feeling boxed-in.
+func writeSectionHeader(w io.Writer, s *styler, title string) {
+	fmt.Fprintf(w, "%s %s\n", s.forge("──"), s.bold(title))
+}
+
+// writeCreateGitHubRepositoryHelp emits the `--help` text for the subcommand.
+// It keeps the banner off the help screen so scripts that run `--help` for
+// discovery don't have to scroll past ASCII art.
+func writeCreateGitHubRepositoryHelp(stdout io.Writer, s *styler) {
+	fmt.Fprintf(stdout, `%s
+  smyth create-manifest github-repo [--dir <path>]
+
+Interactively prompts for the fields required to build a GitHubRepository
+manifest. Nested specs (features, merge policy, branch protection, etc.) are
+left out for now and can be added to the generated manifest by hand or by
+follow-up commands.
+
+%s
+  %s %s
+`,
+		s.bold("Usage:"),
+		s.bold("Flags:"),
+		s.cyan("--dir <path>"),
+		s.dim("Directory to write the manifest into (default: current directory)"),
+	)
 }
 
 // disambiguateRepositoryName checks whether a manifest for owner/name already
@@ -162,10 +184,12 @@ func disambiguateRepositoryName(dir, owner, name string, p *prompter) (string, e
 		return "", fmt.Errorf("expected manifest file but %s is a directory", path)
 	}
 
-	fmt.Fprintf(p.writer, "\nA manifest for %s/%s already exists:\n  %s\n", owner, name, path)
-	fmt.Fprintln(p.writer, "If this is the manifest you intended to update, edit it directly.")
-	fmt.Fprintln(p.writer, "Continuing will append a random suffix to the repository name so the")
-	fmt.Fprintln(p.writer, "generated manifest describes a different repository.")
+	s := p.style
+	fmt.Fprintf(p.writer, "\n%s a manifest for %s/%s already exists:\n", s.yellow("⚠"), s.bold(owner), s.bold(name))
+	fmt.Fprintf(p.writer, "  %s\n", s.bold(path))
+	fmt.Fprintln(p.writer, s.dim("  if this is the manifest you intended to update, edit it directly."))
+	fmt.Fprintln(p.writer, s.dim("  continuing will append a random suffix so the new manifest describes"))
+	fmt.Fprintln(p.writer, s.dim("  a different repository."))
 	fmt.Fprintln(p.writer)
 
 	cont, err := p.askBool("Continue anyway", false)
@@ -183,7 +207,7 @@ func disambiguateRepositoryName(dir, owner, name string, p *prompter) (string, e
 	}
 
 	suffixed := fmt.Sprintf("%s-%s", name, suffix)
-	fmt.Fprintf(p.writer, "Using repository name %q for the new manifest.\n", suffixed)
+	fmt.Fprintf(p.writer, "  %s using repository name %s for the new manifest.\n", s.green("✓"), s.bold(suffixed))
 
 	return suffixed, nil
 }

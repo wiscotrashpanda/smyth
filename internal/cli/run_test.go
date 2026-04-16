@@ -16,8 +16,8 @@ func TestRunHelp(t *testing.T) {
 	}
 
 	output := stdout.String()
-	if !strings.Contains(output, "Hello from Smyth.") {
-		t.Fatalf("expected help output to contain greeting, got %q", output)
+	if !strings.Contains(output, "forged manifests for anvil") {
+		t.Fatalf("expected help output to contain banner tagline, got %q", output)
 	}
 
 	if !strings.Contains(output, "create-manifest") {

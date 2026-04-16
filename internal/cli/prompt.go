@@ -14,20 +14,29 @@ import (
 type prompter struct {
 	reader *bufio.Reader
 	writer io.Writer
+	style  *styler
 }
 
 func newPrompter(stdin io.Reader, stdout io.Writer) *prompter {
-	return &prompter{reader: bufio.NewReader(stdin), writer: stdout}
+	return &prompter{
+		reader: bufio.NewReader(stdin),
+		writer: stdout,
+		style:  newStyler(stdout),
+	}
 }
 
 // ask renders the prompt and returns the trimmed response. When the user
 // provides an empty line the supplied default is returned instead.
 func (p *prompter) ask(label, defaultValue string) (string, error) {
+	marker := p.style.cyan("?")
+
 	if defaultValue != "" {
-		fmt.Fprintf(p.writer, "%s [%s]: ", label, defaultValue)
+		fmt.Fprintf(p.writer, "%s %s %s ", marker, label, p.style.dim("["+defaultValue+"]"))
 	} else {
-		fmt.Fprintf(p.writer, "%s: ", label)
+		fmt.Fprintf(p.writer, "%s %s ", marker, label)
 	}
+
+	fmt.Fprint(p.writer, p.style.dim("› "))
 
 	value, err := p.readLine()
 	if err != nil {
@@ -53,14 +62,14 @@ func (p *prompter) askRequired(label string) (string, error) {
 			return value, nil
 		}
 
-		fmt.Fprintln(p.writer, "a value is required")
+		p.warn("a value is required")
 	}
 }
 
 // askChoice prompts the user for one of the supplied options. The default is
 // accepted on an empty response.
 func (p *prompter) askChoice(label string, options []string, defaultValue string) (string, error) {
-	displayLabel := fmt.Sprintf("%s (%s)", label, strings.Join(options, "/"))
+	displayLabel := fmt.Sprintf("%s %s", label, p.style.dim("("+strings.Join(options, "/")+")"))
 
 	for {
 		value, err := p.ask(displayLabel, defaultValue)
@@ -78,7 +87,7 @@ func (p *prompter) askChoice(label string, options []string, defaultValue string
 			}
 		}
 
-		fmt.Fprintf(p.writer, "must be one of: %s\n", strings.Join(options, ", "))
+		p.warn("must be one of: " + strings.Join(options, ", "))
 	}
 }
 
@@ -90,7 +99,7 @@ func (p *prompter) askBool(label string, defaultValue bool) (bool, error) {
 		defaultLabel = "Y/n"
 	}
 
-	displayLabel := fmt.Sprintf("%s (%s)", label, defaultLabel)
+	displayLabel := fmt.Sprintf("%s %s", label, p.style.dim("("+defaultLabel+")"))
 
 	for {
 		value, err := p.ask(displayLabel, "")
@@ -109,7 +118,7 @@ func (p *prompter) askBool(label string, defaultValue bool) (bool, error) {
 			return false, nil
 		}
 
-		fmt.Fprintln(p.writer, "please answer y or n")
+		p.warn("please answer y or n")
 	}
 }
 
@@ -148,6 +157,13 @@ func (p *prompter) askList(label string) ([]string, error) {
 	}
 
 	return result, nil
+}
+
+// warn writes an inline validation message prefixed with a styled marker. It
+// keeps substring assertions in tests stable by always including the raw
+// message text after the marker.
+func (p *prompter) warn(message string) {
+	fmt.Fprintf(p.writer, "  %s %s\n", p.style.yellow("!"), message)
 }
 
 func (p *prompter) readLine() (string, error) {
