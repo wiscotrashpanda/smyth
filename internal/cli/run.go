@@ -17,11 +17,12 @@ Usage:
   smyth [command]
 
 Available Commands:
-  help        Show this message
+  create-manifest <type>   Author a manifest for the given resource type
+  help                     Show this message
 `
 
 // Run executes the CLI against the provided arguments.
-func Run(args []string, stdout io.Writer) error {
+func Run(args []string, stdin io.Reader, stdout io.Writer) error {
 	if len(args) == 0 {
 		_, err := fmt.Fprint(stdout, helpText)
 		return err
@@ -31,6 +32,8 @@ func Run(args []string, stdout io.Writer) error {
 	case "help", "--help", "-h":
 		_, err := fmt.Fprint(stdout, helpText)
 		return err
+	case "create-manifest":
+		return runCreateManifest(args[1:], stdin, stdout)
 	default:
 		return fmt.Errorf("unknown command: %s", args[0])
 	}
