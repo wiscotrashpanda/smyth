@@ -11,13 +11,17 @@ func TestRunHelp(t *testing.T) {
 
 	var stdout bytes.Buffer
 
-	if err := Run([]string{"help"}, &stdout); err != nil {
+	if err := Run([]string{"help"}, nil, &stdout); err != nil {
 		t.Fatalf("Run(help) returned error: %v", err)
 	}
 
 	output := stdout.String()
-	if !strings.Contains(output, "Hello from Smyth.") {
-		t.Fatalf("expected help output to contain greeting, got %q", output)
+	if !strings.Contains(output, "forged manifests for anvil") {
+		t.Fatalf("expected help output to contain banner tagline, got %q", output)
+	}
+
+	if !strings.Contains(output, "create-manifest") {
+		t.Fatalf("expected help output to advertise create-manifest command, got %q", output)
 	}
 }
 
@@ -26,7 +30,7 @@ func TestRunNoArgsShowsHelp(t *testing.T) {
 
 	var stdout bytes.Buffer
 
-	if err := Run(nil, &stdout); err != nil {
+	if err := Run(nil, nil, &stdout); err != nil {
 		t.Fatalf("Run(nil) returned error: %v", err)
 	}
 
@@ -41,7 +45,7 @@ func TestRunUnknownCommand(t *testing.T) {
 
 	var stdout bytes.Buffer
 
-	err := Run([]string{"nope"}, &stdout)
+	err := Run([]string{"nope"}, nil, &stdout)
 	if err == nil {
 		t.Fatal("expected unknown command error")
 	}
