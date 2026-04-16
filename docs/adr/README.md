@@ -6,4 +6,4 @@ ADRs capture durable engineering and product decisions, especially when there we
 
 ## Index
 
-No ADRs have been recorded yet.
+- [0001: Use Go for the Smyth CLI](/Volumes/Bolt/Code/wiscotrashpanda/smyth/docs/adr/0001-use-go-for-cli.md)
