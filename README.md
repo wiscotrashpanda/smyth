@@ -94,7 +94,13 @@ Smyth publishes:
 - GitHub Release archives for direct CLI consumption
 - Docker images to GitHub Container Registry
 
-The GitHub Actions workflow publishes the container image to `ghcr.io` and links it to this repository so the package can be managed from the repository's package settings.
+The GitHub Actions workflows are split by intent:
+
+- pushes to `feat/*` run the test suite
+- pushes to `main` run the test suite and build binary artifacts
+- release tags (`v*`) run tests, publish release archives, and publish the Docker image to `ghcr.io`
+
+Published container images are linked back to this repository so the package can be managed from the repository's package settings.
 
 Example published image reference:
 

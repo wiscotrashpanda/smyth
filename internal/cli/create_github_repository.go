@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	v1alpha1 "github.com/wiscotrashpanda/alloy/manifest/v1alpha1"
+	v1alpha1 "github.com/emkaytec/alloy/manifest/v1alpha1"
 	"gopkg.in/yaml.v3"
 )
 
@@ -57,12 +57,12 @@ func runCreateGitHubRepository(args []string, stdin io.Reader, stdout io.Writer)
 		return err
 	}
 
-	name, err := p.askRequired("Repository name")
+	name, err := askRepositoryName(p)
 	if err != nil {
 		return err
 	}
 
-	name, err = disambiguateRepositoryName(*dir, owner, name, p)
+	filename, err := disambiguateManifestFilename(*dir, owner, name, p)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func runCreateGitHubRepository(args []string, stdin io.Reader, stdout io.Writer)
 		return err
 	}
 
-	outputPath, err := writeManifest(*dir, manifestFilename(owner, name), encoded)
+	outputPath, err := writeManifest(*dir, filename, encoded)
 	if err != nil {
 		return err
 	}
@@ -163,18 +163,45 @@ follow-up commands.
 	)
 }
 
-// disambiguateRepositoryName checks whether a manifest for owner/name already
+func askRepositoryName(p *prompter) (string, error) {
+	for {
+		raw, err := p.askRequired("Repository name")
+		if err != nil {
+			return "", err
+		}
+
+		normalized := normalizeRepositoryName(raw)
+		if normalized == "" {
+			p.warn("repository name must contain letters or numbers")
+			continue
+		}
+
+		if normalized != strings.TrimSpace(raw) {
+			fmt.Fprintf(
+				p.writer,
+				"  %s using repository name %s\n",
+				p.style.dim("›"),
+				p.style.bold(normalized),
+			)
+		}
+
+		return normalized, nil
+	}
+}
+
+// disambiguateManifestFilename checks whether a manifest for owner/name already
 // exists in dir. If it does, the user is warned and asked whether to continue.
-// Declining aborts the command; confirming returns the repository name with a
-// short random suffix appended so the new manifest does not clobber the
-// existing one and the generated repo is unambiguously distinct.
-func disambiguateRepositoryName(dir, owner, name string, p *prompter) (string, error) {
-	path := filepath.Join(dir, manifestFilename(owner, name))
+// Declining aborts the command; confirming returns an alternate filename so the
+// new manifest does not clobber the existing file while still describing the
+// same repository.
+func disambiguateManifestFilename(dir, owner, name string, p *prompter) (string, error) {
+	filename := manifestFilename(owner, name)
+	path := filepath.Join(dir, filename)
 
 	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return name, nil
+			return filename, nil
 		}
 
 		return "", fmt.Errorf("inspect %s: %w", path, err)
@@ -201,15 +228,14 @@ func disambiguateRepositoryName(dir, owner, name string, p *prompter) (string, e
 		return "", fmt.Errorf("aborted: manifest already exists at %s", path)
 	}
 
-	suffix, err := randomSuffix(4)
+	suffixedFilename, err := nextManifestFilename(dir, owner, name)
 	if err != nil {
 		return "", err
 	}
 
-	suffixed := fmt.Sprintf("%s-%s", name, suffix)
-	fmt.Fprintf(p.writer, "  %s using repository name %s for the new manifest.\n", s.green("✓"), s.bold(suffixed))
+	fmt.Fprintf(p.writer, "  %s using filename %s for the new manifest.\n", s.green("✓"), s.bold(suffixedFilename))
 
-	return suffixed, nil
+	return suffixedFilename, nil
 }
 
 // defaultMetadataName builds a conventional metadata.name from the owner and
@@ -229,10 +255,14 @@ func defaultMetadataName(owner, name string) string {
 // manifestFilename returns the canonical filename for a GitHubRepository
 // manifest belonging to owner/name.
 func manifestFilename(owner, name string) string {
+	return fmt.Sprintf("%s.manifest.yaml", manifestFilenameBase(owner, name))
+}
+
+func manifestFilenameBase(owner, name string) string {
 	owner = strings.ToLower(strings.TrimSpace(owner))
 	name = strings.ToLower(strings.TrimSpace(name))
 
-	return fmt.Sprintf("%s-%s.manifest.yaml", owner, name)
+	return fmt.Sprintf("%s-%s", owner, name)
 }
 
 // randomSuffix returns a lowercase alphanumeric string of length n suitable
@@ -249,6 +279,59 @@ func randomSuffix(n int) (string, error) {
 	}
 
 	return string(result), nil
+}
+
+func nextManifestFilename(dir, owner, name string) (string, error) {
+	base := manifestFilenameBase(owner, name)
+
+	for range 16 {
+		suffix, err := randomSuffix(4)
+		if err != nil {
+			return "", err
+		}
+
+		filename := fmt.Sprintf("%s-%s.manifest.yaml", base, suffix)
+		path := filepath.Join(dir, filename)
+
+		if _, err := os.Stat(path); err != nil {
+			if os.IsNotExist(err) {
+				return filename, nil
+			}
+
+			return "", fmt.Errorf("inspect %s: %w", path, err)
+		}
+	}
+
+	return "", fmt.Errorf("could not generate a unique manifest filename for %s/%s", owner, name)
+}
+
+func normalizeRepositoryName(name string) string {
+	name = strings.TrimSpace(strings.ToLower(name))
+	if name == "" {
+		return ""
+	}
+
+	var b strings.Builder
+	b.Grow(len(name))
+
+	lastWasHyphen := false
+	for _, r := range name {
+		switch {
+		case r >= 'a' && r <= 'z':
+			b.WriteRune(r)
+			lastWasHyphen = false
+		case r >= '0' && r <= '9':
+			b.WriteRune(r)
+			lastWasHyphen = false
+		default:
+			if !lastWasHyphen && b.Len() > 0 {
+				b.WriteByte('-')
+				lastWasHyphen = true
+			}
+		}
+	}
+
+	return strings.Trim(b.String(), "-")
 }
 
 // encodeManifest serializes a manifest to YAML with indentation that matches

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	v1alpha1 "github.com/wiscotrashpanda/alloy/manifest/v1alpha1"
+	v1alpha1 "github.com/emkaytec/alloy/manifest/v1alpha1"
 	"gopkg.in/yaml.v3"
 )
 
@@ -268,14 +268,12 @@ func TestCreateGitHubRepositoryAppendsSuffixWhenContinuing(t *testing.T) {
 		t.Fatalf("unmarshal manifest: %v", err)
 	}
 
-	specNamePattern := regexp.MustCompile(`^example-repo-[a-z0-9]{4}$`)
-	if !specNamePattern.MatchString(manifest.Spec.Name) {
-		t.Errorf("spec.name %q does not match suffixed pattern", manifest.Spec.Name)
+	if manifest.Spec.Name != "example-repo" {
+		t.Errorf("spec.name: got %q, want example-repo", manifest.Spec.Name)
 	}
 
-	metadataNamePattern := regexp.MustCompile(`^example-org-example-repo-[a-z0-9]{4}$`)
-	if !metadataNamePattern.MatchString(manifest.Metadata.Name) {
-		t.Errorf("metadata.name %q does not match suffixed pattern", manifest.Metadata.Name)
+	if manifest.Metadata.Name != "example-org-example-repo" {
+		t.Errorf("metadata.name: got %q, want example-org-example-repo", manifest.Metadata.Name)
 	}
 
 	// The pre-existing file should still be the original placeholder.
@@ -286,6 +284,48 @@ func TestCreateGitHubRepositoryAppendsSuffixWhenContinuing(t *testing.T) {
 
 	if string(seedData) != "existing" {
 		t.Fatalf("pre-existing manifest was modified: %q", string(seedData))
+	}
+}
+
+func TestCreateGitHubRepositoryNormalizesRepositoryName(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+
+	input := strings.Join([]string{
+		"example-org",
+		"  Repo With Spaces  ",
+		"", "", "", "", "", "",
+		"",
+	}, "\n")
+
+	var stdout bytes.Buffer
+
+	if err := Run([]string{"create-manifest", "github-repo", "--dir", dir}, strings.NewReader(input), &stdout); err != nil {
+		t.Fatalf("Run returned error: %v\noutput: %s", err, stdout.String())
+	}
+
+	manifestPath := filepath.Join(dir, "example-org-repo-with-spaces.manifest.yaml")
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatalf("read generated manifest: %v", err)
+	}
+
+	var manifest v1alpha1.GitHubRepositoryManifest
+	if err := yaml.Unmarshal(data, &manifest); err != nil {
+		t.Fatalf("unmarshal manifest: %v\ncontents: %s", err, string(data))
+	}
+
+	if manifest.Metadata.Name != "example-org-repo-with-spaces" {
+		t.Errorf("metadata.name: got %q, want example-org-repo-with-spaces", manifest.Metadata.Name)
+	}
+
+	if manifest.Spec.Name != "repo-with-spaces" {
+		t.Errorf("spec.name: got %q, want repo-with-spaces", manifest.Spec.Name)
+	}
+
+	if !strings.Contains(stdout.String(), "using repository name repo-with-spaces") {
+		t.Fatalf("expected normalization message, got:\n%s", stdout.String())
 	}
 }
 

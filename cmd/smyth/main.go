@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/wiscotrashpanda/smyth/internal/cli"
+	"github.com/emkaytec/smyth/internal/cli"
 )
 
 func main() {
