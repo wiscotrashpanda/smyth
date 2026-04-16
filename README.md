@@ -70,6 +70,13 @@ go build -o bin/smyth ./cmd/smyth
 ./bin/smyth --help
 ```
 
+Build the Docker image locally with:
+
+```bash
+docker build -t smyth:local .
+docker run --rm smyth:local
+```
+
 ## Architecture Decisions
 
 Strategic and architectural decisions for Smyth should be tracked as ADRs under [docs/adr](docs/adr/README.md).
@@ -82,7 +89,18 @@ Strategic and architectural decisions for Smyth should be tracked as ADRs under 
 
 ## Distribution
 
-Smyth publishes GitHub Release archives for direct CLI consumption.
+Smyth publishes:
+
+- GitHub Release archives for direct CLI consumption
+- Docker images to GitHub Container Registry
+
+Example published image reference:
+
+```text
+ghcr.io/example-org/smyth:latest
+```
+
+Replace `example-org` with the repository owner when pulling from GitHub Container Registry.
 
 ## AI-Assisted Development
 
