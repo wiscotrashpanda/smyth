@@ -70,20 +70,6 @@ go build -o bin/smyth ./cmd/smyth
 ./bin/smyth --help
 ```
 
-Build the Docker image with:
-
-```bash
-docker build -t smyth:local .
-docker run --rm smyth:local
-```
-
-Build a specific Docker target platform locally with:
-
-```bash
-docker buildx build --platform linux/arm64 -t smyth:local --load .
-docker run --rm smyth:local
-```
-
 ## Architecture Decisions
 
 Strategic and architectural decisions for Smyth should be tracked as ADRs under [docs/adr](docs/adr/README.md).
@@ -96,10 +82,7 @@ Strategic and architectural decisions for Smyth should be tracked as ADRs under 
 
 ## Distribution
 
-Smyth is set up to publish two artifact types using GitHub Actions:
-
-- GitHub Release archives for direct CLI consumption
-- Docker images on Docker Hub for containerized execution
+Smyth publishes GitHub Release archives for direct CLI consumption.
 
 ## AI-Assisted Development
 
