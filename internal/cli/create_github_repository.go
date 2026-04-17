@@ -447,7 +447,7 @@ func normalizeRepositoryName(name string) string {
 
 // encodeManifest serializes a manifest to YAML with indentation that matches
 // existing Anvil/Alloy examples.
-func encodeManifest(manifest v1alpha1.GitHubRepositoryManifest) ([]byte, error) {
+func encodeManifest(manifest any) ([]byte, error) {
 	var buf strings.Builder
 
 	encoder := yaml.NewEncoder(&buf)

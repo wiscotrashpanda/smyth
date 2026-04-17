@@ -66,6 +66,18 @@ func (p *prompter) askRequired(label string) (string, error) {
 	}
 }
 
+// askRequiredAsOptional returns a pointer to a required string so callers can
+// populate pointer-backed schema fields without losing the shared "required"
+// prompt behavior.
+func (p *prompter) askRequiredAsOptional(label string) (*string, error) {
+	value, err := p.askRequired(label)
+	if err != nil {
+		return nil, err
+	}
+
+	return &value, nil
+}
+
 // askChoice prompts the user for one of the supplied options. The default is
 // accepted on an empty response.
 func (p *prompter) askChoice(label string, options []string, defaultValue string) (string, error) {

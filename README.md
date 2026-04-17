@@ -8,9 +8,9 @@ This repository is the public product repository for Smyth. It is intended to sh
 
 ## Status
 
-This is an initial working scaffold.
+This is an initial working CLI scaffold with interactive manifest authoring flows for the resource kinds Smyth currently supports.
 
-The repository currently includes the first Go CLI entrypoint under `cmd/smyth` and `internal/cli`, plus repository guidance that defines Smyth's role as the authoring counterpart to `anvil`.
+The repository currently includes the Go CLI entrypoint under `cmd/smyth`, the shared prompt/encoding flow under `internal/cli`, and manifest authoring commands for both GitHub repositories and HCP Terraform workspaces.
 
 ## Core Principles
 
@@ -27,6 +27,7 @@ The v1 direction is a manifest-authoring CLI with shared schema validation and s
 Initial expected support:
 
 - `GitHubRepository` manifest authoring
+- `HCPTerraformWorkspace` manifest authoring
 - validation through `alloy`
 - writing generated YAML manifests into the current directory by default
 - explicit manifest-directory override support
@@ -55,6 +56,7 @@ Run the CLI help locally with:
 
 ```bash
 go run ./cmd/smyth --help
+go run ./cmd/smyth create-manifest hcp-terraform-workspace --help
 ```
 
 Run the current test suite with:

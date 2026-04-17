@@ -23,6 +23,10 @@ func TestCreateManifestNoTypeShowsHelp(t *testing.T) {
 	if !strings.Contains(output, "github-repo") {
 		t.Fatalf("expected help output to mention github-repo, got:\n%s", output)
 	}
+
+	if !strings.Contains(output, "hcp-terraform-workspace") {
+		t.Fatalf("expected help output to mention hcp-terraform-workspace, got:\n%s", output)
+	}
 }
 
 func TestCreateManifestUnknownType(t *testing.T) {

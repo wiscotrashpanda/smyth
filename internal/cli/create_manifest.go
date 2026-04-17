@@ -18,6 +18,8 @@ func runCreateManifest(args []string, stdin io.Reader, stdout io.Writer) error {
 		return writeCreateManifestHelp(stdout)
 	case "github-repo":
 		return runCreateGitHubRepository(args[1:], stdin, stdout)
+	case "hcp-terraform-workspace":
+		return runCreateHCPTerraformWorkspace(args[1:], stdin, stdout)
 	default:
 		return fmt.Errorf("unknown manifest type: %s", args[0])
 	}
@@ -34,12 +36,14 @@ prompt flow and shared-schema validation.
 
 %s
   %s   %s
+  %s   %s
 
 Run %s for type-specific flags.
 `,
 		s.bold("Usage:"),
 		s.bold("Manifest types:"),
 		s.cyan("github-repo"), s.dim("Author a GitHubRepository manifest"),
+		s.cyan("hcp-terraform-workspace"), s.dim("Author a HCPTerraformWorkspace manifest"),
 		s.cyan("smyth create-manifest <type> --help"),
 	)
 
