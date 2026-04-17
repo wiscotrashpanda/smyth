@@ -91,6 +91,47 @@ func (p *prompter) askChoice(label string, options []string, defaultValue string
 	}
 }
 
+// askOptional prompts for a string value that may be omitted entirely. A blank
+// response returns nil so callers can distinguish "unmanaged" from an explicit
+// empty string represented by editing the manifest later by hand.
+func (p *prompter) askOptional(label string) (*string, error) {
+	value, err := p.ask(label, "")
+	if err != nil {
+		return nil, err
+	}
+
+	if value == "" {
+		return nil, nil
+	}
+
+	return &value, nil
+}
+
+// askOptionalChoice prompts for one of the supplied options while allowing the
+// operator to leave the field unmanaged by submitting a blank response.
+func (p *prompter) askOptionalChoice(label string, options []string) (*string, error) {
+	displayLabel := fmt.Sprintf("%s %s", label, p.style.dim("("+strings.Join(options, "/")+", blank to omit)"))
+
+	for {
+		value, err := p.ask(displayLabel, "")
+		if err != nil {
+			return nil, err
+		}
+
+		if value == "" {
+			return nil, nil
+		}
+
+		for _, option := range options {
+			if strings.EqualFold(value, option) {
+				return &option, nil
+			}
+		}
+
+		p.warn("must be one of: " + strings.Join(options, ", "))
+	}
+}
+
 // askBool returns true/false based on a y/n answer, defaulting to the supplied
 // value on an empty response.
 func (p *prompter) askBool(label string, defaultValue bool) (bool, error) {
@@ -116,6 +157,34 @@ func (p *prompter) askBool(label string, defaultValue bool) (bool, error) {
 			return true, nil
 		case "n", "no", "false":
 			return false, nil
+		}
+
+		p.warn("please answer y or n")
+	}
+}
+
+// askOptionalBool prompts for a boolean value that may be omitted from the
+// manifest entirely. A blank response returns nil.
+func (p *prompter) askOptionalBool(label string) (*bool, error) {
+	displayLabel := fmt.Sprintf("%s %s", label, p.style.dim("(y/n, blank to omit)"))
+
+	for {
+		value, err := p.ask(displayLabel, "")
+		if err != nil {
+			return nil, err
+		}
+
+		if value == "" {
+			return nil, nil
+		}
+
+		switch strings.ToLower(value) {
+		case "y", "yes", "true":
+			result := true
+			return &result, nil
+		case "n", "no", "false":
+			result := false
+			return &result, nil
 		}
 
 		p.warn("please answer y or n")

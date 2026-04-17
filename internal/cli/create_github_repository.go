@@ -48,6 +48,7 @@ func runCreateGitHubRepository(args []string, stdin io.Reader, stdout io.Writer)
 	writeBanner(stdout, s)
 	writeSectionHeader(stdout, s, "Authoring a GitHubRepository manifest")
 	fmt.Fprintln(stdout, s.dim("  press enter to accept the default shown in brackets"))
+	fmt.Fprintln(stdout, s.dim("  fields without defaults are omitted from the manifest when left blank"))
 	fmt.Fprintln(stdout)
 
 	p := newPrompter(stdin, stdout)
@@ -67,22 +68,24 @@ func runCreateGitHubRepository(args []string, stdin io.Reader, stdout io.Writer)
 		return err
 	}
 
-	visibility, err := p.askChoice("Visibility", []string{"public", "private", "internal"}, "private")
+	writeSectionHeader(stdout, s, "Core settings")
+
+	visibility, err := p.askOptionalChoice("Visibility", []string{"public", "private", "internal"})
 	if err != nil {
 		return err
 	}
 
-	description, err := p.ask("Description (optional)", "")
+	description, err := p.askOptional("Description")
 	if err != nil {
 		return err
 	}
 
-	homepage, err := p.ask("Homepage URL (optional)", "")
+	homepage, err := p.askOptional("Homepage URL")
 	if err != nil {
 		return err
 	}
 
-	defaultBranch, err := p.ask("Default branch", "main")
+	defaultBranch, err := p.askOptional("Default branch")
 	if err != nil {
 		return err
 	}
@@ -93,6 +96,20 @@ func runCreateGitHubRepository(args []string, stdin io.Reader, stdout io.Writer)
 	}
 
 	topics, err := p.askList("Topics (comma separated, optional)")
+	if err != nil {
+		return err
+	}
+
+	writeSectionHeader(stdout, s, "Feature toggles")
+	fmt.Fprintln(stdout, s.dim("  leave toggles blank to keep them unmanaged"))
+	features, err := askGitHubRepositoryFeatures(p)
+	if err != nil {
+		return err
+	}
+
+	writeSectionHeader(stdout, s, "Merge policy")
+	fmt.Fprintln(stdout, s.dim("  leave settings blank to keep them unmanaged"))
+	mergePolicy, err := askGitHubRepositoryMergePolicy(p)
 	if err != nil {
 		return err
 	}
@@ -110,6 +127,8 @@ func runCreateGitHubRepository(args []string, stdin io.Reader, stdout io.Writer)
 			DefaultBranch: defaultBranch,
 			AutoInit:      autoInit,
 			Topics:        topics,
+			Features:      features,
+			MergePolicy:   mergePolicy,
 		},
 	)
 
@@ -149,9 +168,10 @@ func writeCreateGitHubRepositoryHelp(stdout io.Writer, s *styler) {
   smyth create-manifest github-repo [--dir <path>]
 
 Interactively prompts for the fields required to build a GitHubRepository
-manifest. Nested specs (features, merge policy, branch protection, etc.) are
-left out for now and can be added to the generated manifest by hand or by
-follow-up commands.
+manifest for Anvil's current core repository-management surface. Fields left
+blank are omitted so the generated manifest only declares settings you want
+Anvil to manage. The prompt flow includes basic feature toggles and
+straightforward merge policy settings from the reduced v1 scope.
 
 %s
   %s %s
@@ -161,6 +181,97 @@ follow-up commands.
 		s.cyan("--dir <path>"),
 		s.dim("Directory to write the manifest into (default: current directory)"),
 	)
+}
+
+func askGitHubRepositoryFeatures(p *prompter) (*v1alpha1.GitHubRepositoryFeaturesSpec, error) {
+	configure, err := p.askBool("Configure repository feature toggles", false)
+	if err != nil {
+		return nil, err
+	}
+
+	if !configure {
+		return nil, nil
+	}
+
+	hasIssues, err := p.askOptionalBool("Issues enabled")
+	if err != nil {
+		return nil, err
+	}
+
+	hasProjects, err := p.askOptionalBool("Projects enabled")
+	if err != nil {
+		return nil, err
+	}
+
+	hasWiki, err := p.askOptionalBool("Wiki enabled")
+	if err != nil {
+		return nil, err
+	}
+
+	if hasIssues == nil && hasProjects == nil && hasWiki == nil {
+		return nil, nil
+	}
+
+	return &v1alpha1.GitHubRepositoryFeaturesSpec{
+		HasIssues:   hasIssues,
+		HasProjects: hasProjects,
+		HasWiki:     hasWiki,
+	}, nil
+}
+
+func askGitHubRepositoryMergePolicy(p *prompter) (*v1alpha1.GitHubRepositoryMergePolicySpec, error) {
+	configure, err := p.askBool("Configure merge policy settings", false)
+	if err != nil {
+		return nil, err
+	}
+
+	if !configure {
+		return nil, nil
+	}
+
+	allowSquashMerge, err := p.askOptionalBool("Allow squash merge")
+	if err != nil {
+		return nil, err
+	}
+
+	allowMergeCommit, err := p.askOptionalBool("Allow merge commit")
+	if err != nil {
+		return nil, err
+	}
+
+	allowRebaseMerge, err := p.askOptionalBool("Allow rebase merge")
+	if err != nil {
+		return nil, err
+	}
+
+	allowAutoMerge, err := p.askOptionalBool("Allow auto merge")
+	if err != nil {
+		return nil, err
+	}
+
+	allowUpdateBranch, err := p.askOptionalBool("Allow update branch")
+	if err != nil {
+		return nil, err
+	}
+
+	deleteBranchOnMerge, err := p.askOptionalBool("Delete branch on merge")
+	if err != nil {
+		return nil, err
+	}
+
+	if allowSquashMerge == nil && allowMergeCommit == nil && allowRebaseMerge == nil &&
+		allowAutoMerge == nil && allowUpdateBranch == nil && deleteBranchOnMerge == nil {
+		return nil, nil
+	}
+
+	return &v1alpha1.GitHubRepositoryMergePolicySpec{
+		AllowSquashMerge:    allowSquashMerge,
+		AllowMergeCommit:    allowMergeCommit,
+		AllowRebaseMerge:    allowRebaseMerge,
+		AllowAutoMerge:      allowAutoMerge,
+		AllowUpdateBranch:   allowUpdateBranch,
+		DeleteBranchOnMerge: deleteBranchOnMerge,
+	}, nil
 }
 
 func askRepositoryName(p *prompter) (string, error) {

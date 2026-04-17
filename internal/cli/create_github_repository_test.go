@@ -21,12 +21,14 @@ func TestCreateGitHubRepositoryUsesDefaults(t *testing.T) {
 	input := strings.Join([]string{
 		"example-org",
 		"example-repo",
-		"", // visibility -> "private"
-		"", // description -> ""
-		"", // homepage -> ""
-		"", // default branch -> "main"
+		"", // visibility -> unmanaged
+		"", // description -> unmanaged
+		"", // homepage -> unmanaged
+		"", // default branch -> unmanaged
 		"", // auto-init -> false
-		"", // topics -> none
+		"", // topics -> unmanaged
+		"", // features -> skipped
+		"", // merge policy -> skipped
 		"",
 	}, "\n")
 
@@ -67,20 +69,36 @@ func TestCreateGitHubRepositoryUsesDefaults(t *testing.T) {
 		t.Errorf("spec.name: got %q, want example-repo", manifest.Spec.Name)
 	}
 
-	if manifest.Spec.Visibility != "private" {
-		t.Errorf("spec.visibility: got %q, want private", manifest.Spec.Visibility)
+	if manifest.Spec.Visibility != nil {
+		t.Errorf("spec.visibility: got %v, want nil", manifest.Spec.Visibility)
 	}
 
-	if manifest.Spec.DefaultBranch != "main" {
-		t.Errorf("spec.defaultBranch: got %q, want main", manifest.Spec.DefaultBranch)
+	if manifest.Spec.Description != nil {
+		t.Errorf("spec.description: got %v, want nil", manifest.Spec.Description)
+	}
+
+	if manifest.Spec.Homepage != nil {
+		t.Errorf("spec.homepage: got %v, want nil", manifest.Spec.Homepage)
+	}
+
+	if manifest.Spec.DefaultBranch != nil {
+		t.Errorf("spec.defaultBranch: got %v, want nil", manifest.Spec.DefaultBranch)
 	}
 
 	if manifest.Spec.AutoInit {
 		t.Errorf("spec.autoInit: got true, want false")
 	}
 
-	if len(manifest.Spec.Topics) != 0 {
-		t.Errorf("spec.topics: got %v, want empty", manifest.Spec.Topics)
+	if manifest.Spec.Topics != nil {
+		t.Errorf("spec.topics: got %v, want nil", manifest.Spec.Topics)
+	}
+
+	if manifest.Spec.Features != nil {
+		t.Errorf("spec.features: got %#v, want nil", manifest.Spec.Features)
+	}
+
+	if manifest.Spec.MergePolicy != nil {
+		t.Errorf("spec.mergePolicy: got %#v, want nil", manifest.Spec.MergePolicy)
 	}
 
 	if err := manifest.Validate(); err != nil {
@@ -102,6 +120,17 @@ func TestCreateGitHubRepositoryCollectsOptionalFields(t *testing.T) {
 		"trunk",
 		"y",
 		"platform, observability, platform",
+		"y",
+		"y",
+		"n",
+		"n",
+		"y",
+		"y",
+		"n",
+		"y",
+		"y",
+		"n",
+		"y",
 		"",
 	}, "\n")
 
@@ -126,21 +155,10 @@ func TestCreateGitHubRepositoryCollectsOptionalFields(t *testing.T) {
 		t.Errorf("metadata.name: got %q, want example-org-example-repo", manifest.Metadata.Name)
 	}
 
-	if manifest.Spec.Visibility != "public" {
-		t.Errorf("spec.visibility: got %q, want public", manifest.Spec.Visibility)
-	}
-
-	if manifest.Spec.Description != "An example description" {
-		t.Errorf("spec.description: got %q", manifest.Spec.Description)
-	}
-
-	if manifest.Spec.Homepage != "https://example.com" {
-		t.Errorf("spec.homepage: got %q", manifest.Spec.Homepage)
-	}
-
-	if manifest.Spec.DefaultBranch != "trunk" {
-		t.Errorf("spec.defaultBranch: got %q, want trunk", manifest.Spec.DefaultBranch)
-	}
+	assertStringPointerValue(t, "spec.visibility", manifest.Spec.Visibility, "public")
+	assertStringPointerValue(t, "spec.description", manifest.Spec.Description, "An example description")
+	assertStringPointerValue(t, "spec.homepage", manifest.Spec.Homepage, "https://example.com")
+	assertStringPointerValue(t, "spec.defaultBranch", manifest.Spec.DefaultBranch, "trunk")
 
 	if !manifest.Spec.AutoInit {
 		t.Errorf("spec.autoInit: got false, want true")
@@ -156,6 +174,25 @@ func TestCreateGitHubRepositoryCollectsOptionalFields(t *testing.T) {
 			t.Errorf("spec.topics[%d]: got %q, want %q", i, manifest.Spec.Topics[i], topic)
 		}
 	}
+
+	if manifest.Spec.Features == nil {
+		t.Fatal("spec.features: got nil, want populated feature toggles")
+	}
+
+	assertBoolPointerValue(t, "spec.features.hasIssues", manifest.Spec.Features.HasIssues, true)
+	assertBoolPointerValue(t, "spec.features.hasProjects", manifest.Spec.Features.HasProjects, false)
+	assertBoolPointerValue(t, "spec.features.hasWiki", manifest.Spec.Features.HasWiki, false)
+
+	if manifest.Spec.MergePolicy == nil {
+		t.Fatal("spec.mergePolicy: got nil, want populated merge policy")
+	}
+
+	assertBoolPointerValue(t, "spec.mergePolicy.allowSquashMerge", manifest.Spec.MergePolicy.AllowSquashMerge, true)
+	assertBoolPointerValue(t, "spec.mergePolicy.allowMergeCommit", manifest.Spec.MergePolicy.AllowMergeCommit, false)
+	assertBoolPointerValue(t, "spec.mergePolicy.allowRebaseMerge", manifest.Spec.MergePolicy.AllowRebaseMerge, true)
+	assertBoolPointerValue(t, "spec.mergePolicy.allowAutoMerge", manifest.Spec.MergePolicy.AllowAutoMerge, true)
+	assertBoolPointerValue(t, "spec.mergePolicy.allowUpdateBranch", manifest.Spec.MergePolicy.AllowUpdateBranch, false)
+	assertBoolPointerValue(t, "spec.mergePolicy.deleteBranchOnMerge", manifest.Spec.MergePolicy.DeleteBranchOnMerge, true)
 }
 
 func TestCreateGitHubRepositoryAbortsWhenManifestExists(t *testing.T) {
@@ -226,7 +263,7 @@ func TestCreateGitHubRepositoryAppendsSuffixWhenContinuing(t *testing.T) {
 		"example-org",
 		"example-repo",
 		"y", // continue despite existing manifest
-		"", "", "", "", "", "", "",
+		"", "", "", "", "", "", "", "", "",
 	}, "\n")
 
 	var stdout bytes.Buffer
@@ -295,7 +332,7 @@ func TestCreateGitHubRepositoryNormalizesRepositoryName(t *testing.T) {
 	input := strings.Join([]string{
 		"example-org",
 		"  Repo With Spaces  ",
-		"", "", "", "", "", "",
+		"", "", "", "", "", "", "", "",
 		"",
 	}, "\n")
 
@@ -340,7 +377,7 @@ func TestCreateGitHubRepositoryValidatesVisibility(t *testing.T) {
 		"example-repo",
 		"hybrid",
 		"private",
-		"", "", "", "", "", "",
+		"", "", "", "", "", "", "", "",
 	}, "\n")
 
 	var stdout bytes.Buffer
@@ -351,5 +388,29 @@ func TestCreateGitHubRepositoryValidatesVisibility(t *testing.T) {
 
 	if !strings.Contains(stdout.String(), "must be one of") {
 		t.Fatalf("expected visibility validation message, got:\n%s", stdout.String())
+	}
+}
+
+func assertStringPointerValue(t *testing.T, field string, got *string, want string) {
+	t.Helper()
+
+	if got == nil {
+		t.Fatalf("%s: got nil, want %q", field, want)
+	}
+
+	if *got != want {
+		t.Fatalf("%s: got %q, want %q", field, *got, want)
+	}
+}
+
+func assertBoolPointerValue(t *testing.T, field string, got *bool, want bool) {
+	t.Helper()
+
+	if got == nil {
+		t.Fatalf("%s: got nil, want %t", field, want)
+	}
+
+	if *got != want {
+		t.Fatalf("%s: got %t, want %t", field, *got, want)
 	}
 }
